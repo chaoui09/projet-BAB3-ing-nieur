@@ -1,0 +1,313 @@
+#Code colage 
+import os 
+
+from os import listdir 
+
+from os.path import join 
+
+import re 
+
+import pympi as p 
+
+import numpy as np 
+
+import scipy.stats 
+
+from scipy.stats import norm 
+
+import matplotlib.pyplot as plt 
+
+import statistics 
+
+import json 
+
+#appel du path du dossier 
+
+ 
+
+path=r'C:\Users\Loane\OneDrive\Documents\projet BAB3\chat2elan\Colaje-Paris\Julie' 
+
+ 
+
+#find eaf files 
+
+ 
+
+x='eaf' 
+
+lst=listdir(path) 
+
+lst = [l for l in lst if l.endswith(x)] 
+
+list_names=[] 
+
+#lecture des fichiers Elan + remove tier with "@" + créer nouveau fichier Elan apd anciens  
+
+list_final_time=[] 
+
+for g,l in enumerate(lst): 
+
+ 
+
+    filename=os.path.join(path,l) 
+
+    eaf=p.Elan.Eaf(filename) 
+
+    eaf_new=p.Elan.Eaf() 
+
+    old_lst=eaf.get_tier_names() 
+
+    old_lst1=list(old_lst) 
+
+    new_lst=[] #liste des tier sans "@" 
+
+     
+
+    #liste des annotations 
+
+    for i in range(len(old_lst1)): 
+
+        if "@" in old_lst1[i] :#if "@" not in(ou in) l 
+
+            eaf.remove_tier(old_lst1[i]) 
+
+        else:  
+
+            new_lst.append(old_lst1[i]) 
+
+    ref=0 
+
+    for j in range(len(new_lst)):  
+
+ 
+
+        eaf_new.add_tier(new_lst[j]) 
+
+        eaf_new.add_tier('{}_laugh'.format(new_lst[j])) 
+
+        eaf_new.add_tier("{}_smile".format(new_lst[j])) 
+
+        eaf_new.add_tier("{}_speach laugh".format(new_lst[j])) 
+
+        u_list=eaf.get_annotation_data_for_tier(new_lst[j]) 
+
+        u= [] 
+
+         
+
+        for hh in range(len(u_list)): 
+
+            if  (u_list[hh][0] is not None) and (u_list[hh][1] is not None): 
+
+                u.append(u_list[hh]) 
+
+        
+
+ 
+
+        for h in range(len(u)): 
+
+                eaf_new.add_annotation(str(new_lst[j]),int(u[h][0]),int(u[h][1]),u[h][-1])  
+
+                if u[-1][1]: 
+
+                    if u[-1][1]>ref : 
+
+                        ref=u[-1][1] 
+
+                        final_time=u[-1][1] 
+
+         
+
+ 
+
+#il y a t'il un rire spécial dans la phrase? 
+
+ 
+
+                if "&=rit" in u[h][-1]:  
+
+                    eaf_new.add_annotation("{}_speach laugh".format(str(new_lst[j])), int(u[h][0]), int(u[h][1]),str(u[h][-1])) 
+
+ 
+
+                     
+
+#il y a t'il un rire dans la phrase?     
+
+ 
+
+                if "[=! rit]" in u[h][-1]: 
+
+                    eaf_new.add_annotation("{}_laugh".format(str(new_lst[j])), int(u[h][0]), int(u[h][1])) 
+
+                     
+
+             
+
+#il y a t'il un sourire dans la phrase? 
+
+ 
+
+                if "[=! sourit]" in u[h][-1]: 
+
+                    eaf_new.add_annotation("{}_smile".format(str(new_lst[j])), int(u[h][0]), int(u[h][1])) 
+
+     
+
+     
+
+    list_final_time.append(final_time) 
+
+    eaf_new.to_file(filename[:-4]+"_new.eaf") 
+
+ 
+ 
+
+json_file='C:/Users/Loane/OneDrive/Documents/projet BAB3/mytestfile.json' 
+
+dct = {} 
+
+x='_new.eaf' 
+
+files=listdir(path) 
+
+files = [v for v in files if v.endswith(x)] 
+
+for k,v in enumerate(files): 
+
+     
+
+    filename1=os.path.join(path,v) 
+
+    eaf_new=p.Elan.Eaf(filename1) 
+
+    tiers=eaf_new.get_tier_names() 
+
+     
+
+    tiers=[tier for tier in tiers if "_" in tier] 
+
+     
+
+    for d,tier in enumerate(tiers): 
+
+        portion=[] 
+
+        data = eaf_new.get_annotation_data_for_tier(tiers[d]) 
+
+        counter=0 
+
+        for x in range(len(data)): 
+
+            portion.append(data[x][:2]) 
+
+        if portion : 
+
+            for y in range(len(portion)): 
+
+                x1=portion[x][1]-portion[x][0] 
+
+                perc_time= counter + x1 
+
+                counter=x1 
+
+             
+
+        else : 
+
+            perc_time=0 
+
+         
+
+        perc_time=perc_time/list_final_time[k] 
+
+         
+
+        if tier not in dct: 
+
+ 
+
+            dct[tier] = [perc_time] #if data not a list -> [total_time] 
+
+ 
+
+        else: 
+
+     
+
+            dct[tier].append(perc_time) #if not a list -> .append(total_time) 
+
+         
+
+with open(json_file, 'w') as f: 
+
+        json.dump(dct, f) 
+
+ 
+
+# with open(json_file, 'r') as f: 
+
+#     dct = json.load(f) 
+
+ 
+
+keep=[] 
+
+for tiernames in dct: 
+
+    if tiernames.endswith("_laugh"): 
+
+        keep.extend(dct[tiernames]) 
+
+keep=[rr for rr in keep if rr != 0] 
+
+# Creating a series of data of in range of 1-50. 
+
+x = keep 
+
+x.sort() 
+
+ 
+
+#plt.xlim([-0.01,0.01])  
+
+#Creating a Function. 
+
+def normal_dist(x , mean , sd): 
+
+    prob_density = (np.pi*sd) * np.exp(-0.5*((x-mean)/sd)**2) 
+
+    return prob_density 
+
+  
+
+#Calculate mean and Standard deviation. 
+
+mean = np.mean(x) 
+
+sd = np.std(x) 
+
+print(mean) 
+
+print(sd) 
+
+#Apply function to the data. 
+
+pdf = normal_dist(x,mean,sd) 
+
+  
+
+#Plotting the Results 
+
+plt.plot(x, pdf, color = 'red') 
+
+plt.grid() 
+
+plt.title('Probability Density of laughs for all tiers in Antoine ') 
+
+plt.xlabel('Data points') 
+
+plt.ylabel('Probability Density') 
+
+plt.show()
