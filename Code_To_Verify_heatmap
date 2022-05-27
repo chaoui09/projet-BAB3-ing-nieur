@@ -1,0 +1,436 @@
+#code toverify heatmap
+import os 
+
+from os import listdir 
+
+from os.path import join 
+
+import re 
+
+import pympi as p 
+
+import numpy as np 
+
+import matplotlib.pyplot as plt 
+
+ 
+
+import seaborn as sns 
+
+ 
+
+   
+
+   
+
+def count_mimicry(lstA, lstB, delta_t=0): 
+
+    """Count the occurences of B mimicking A by delta_t. 
+
+    
+
+    This implementation counts mimicry based on method in [1] 
+
+    and also returns the instances of mimickry. 
+
+    The times in each of lstA and lstB cannot overlap internally. 
+
+    They have to be successive segments in each of lstA and lstB. 
+
+    [1] Feese, Sebastian, et al. "Quantifying behavioral mimicry by automatic  
+
+    detection of nonverbal cues from body motion." 2012 International Conference  
+
+    on Privacy, Security, Risk and Trust and 2012 International Conference on  
+
+    Social Computing. IEEE, 2012. 
+
+     
+
+    Args: 
+
+        lstA (list): list of tuples (start, stop, label) of expressions mimicked. 
+
+        lstB (list): list of tuples (start, stop, label) of expressions mimicking. 
+
+        delta_t (int, optional): Defaults to 0. 
+
+                                Time after which expression occuring still counts as mimicry. 
+
+                                Should be in the same unit as the times in lstA and lstB.     
+
+    Returns: 
+
+        int: number of times B mimicked A (=len(the list described below)). 
+
+        list: [(indA, indB),...] 
+
+              where the indB element of B mimick the indA element of A 
+
+              following the definition of mimickry described in the reference above. 
+
+    """ 
+
+ 
+
+    indA = 0 
+
+    indB = 0 
+
+    count = 0  # number of mimicry events 
+
+    mimic_ind = []  # indices of mimicry events in lstB 
+
+    if len(lstA) == 0 or len(lstB) == 0:  # if at least one of them has no expression 
+
+        return 0, [] 
+
+    while indA < len(lstA) and indB < len(lstB): 
+
+        if lstB[indB][0] <= lstA[indA][0]: 
+
+            indB += 1 
+
+        elif ( 
+
+            lstB[indB][0] > lstA[indA][0] and (lstB[indB][0] - delta_t) <= lstA[indA][1] 
+
+        ): 
+
+            # avoid double counting incase delta_t is > (lstA[indA+1][0] - lstA[indA][1]) 
+
+            if (indA + 1) < len(lstA): 
+
+                if lstB[indB][0] > lstA[indA + 1][0]: 
+
+                    indA += 1  # skip to next lstA expression 
+
+                    continue 
+
+            count += 1 
+
+            mimic_ind.append((indA, indB)) 
+
+            # if no double counting 
+
+            # check if several expressions from B overlap with A's 
+
+            while lstB[indB][1] <= lstA[indA][1]: 
+
+                indB += 1  # skip to the following expression untill no more overlapping 
+
+                if indB == len(lstB): 
+
+                    break 
+
+            indA += 1 
+
+        elif (lstB[indB][0] - delta_t) > lstA[indA][1]: 
+
+            indA += 1 
+
+    
+
+    return count, mimic_ind 
+
+ 
+
+#appel du path du dossier 
+
+ 
+
+path=r'C:\Users\Loane\OneDrive\Documents\projet BAB3\to_verify' 
+
+ 
+
+#find eaf files 
+
+x='eaf' 
+
+lst=listdir(path) 
+
+lst = [l for l in lst if l.endswith(x)] 
+
+et=[] 
+
+mylist2=[] 
+
+my_list=[] 
+
+lst1=[] 
+
+lst2=[] 
+
+lst3=[] 
+
+lst4=[] 
+
+lst5=[] 
+
+lst6=[] 
+
+lst7=[] 
+
+lst8=[] 
+
+for g,l in enumerate(lst): 
+
+    list_0=[] 
+
+    list__0=[] 
+
+    newlist=[] 
+
+    newlist_=[] 
+
+    mylist_=[] 
+
+    mylist=[] 
+
+     
+
+    filename=os.path.join(path,l) 
+
+    eaf=p.Elan.Eaf(filename) 
+
+    eaf_new=p.Elan.Eaf() 
+
+    gender = filename.split("_")[-1] 
+
+    x=".eaf" 
+
+    gender = gender.replace(x,"") 
+
+    list0=eaf.get_annotation_data_for_tier('Role') 
+
+    list1=eaf.get_annotation_data_for_tier('Laughs') 
+
+    list2=eaf.get_annotation_data_for_tier('Smiles') 
+
+     
+
+    
+
+    for i in range(len(list0)): 
+
+        if 'spk' in list0[i][-1]: 
+
+            list_0.append(list0[i][:2]) 
+
+         
+
+    for v in range(len(list_0)): 
+
+        for y in range(len(list2)): 
+
+             
+
+            #cas où l'annotation commence avant/meme temps et se termine pendant/au meme temps 
+
+                 
+
+            if (list2[y][0]<=list_0[v][0]) and (list_0[v][0]<=list2[y][1]<=list_0[v][1]): 
+
+         
+
+                newlist.append((list_0[v][0],list2[y][1],list2[y][-1])) 
+
+                 
+
+            #cas où l'annotation commence avant et se termine apres 
+
+            if (list2[y][0]<=list_0[v][0]) and (list2[y][1]>=list_0[v][1]): 
+
+                c=list_0[v][1]-list_0[v][0] 
+
+                     
+
+                newlist.append((list_0[v][0],list_0[v][1],list2[y][-1])) 
+
+            #cas ou il est compris entre les 2 voir égale  
+
+            if (list_0[v][0]<=list2[y][0]<=list_0[v][1]) and (list_0[v][0]<=list2[y][1]<=list_0[v][1]): 
+
+                f=list2[y][1]-list2[y][0] 
+
+                     
+
+                newlist.append((list2[y][0],list2[y][1],list2[y][-1]))  
+
+            #cas où l'annotation commence pendant/égale et se termine après 
+
+            if (list_0[v][0]<=list2[y][0]<=list_0[v][1]) and (list2[y][1]>=list_0[v][1]): 
+
+                r=list_0[v][1]-list2[y][0] 
+
+                newlist.append((list2[y][0],list_0[v][1],list2[y][-1])) 
+
+ 
+
+    for h in newlist:  
+
+        if h not in mylist:  
+
+            mylist.append(h) 
+
+     
+
+    for d in range(len(mylist)): 
+
+        if mylist[d][-1]=='subtle': 
+
+            lst1.append(mylist[d]) 
+
+    for dd in range(len(mylist)): 
+
+        if mylist[dd][-1]=='low': 
+
+            lst2.append(mylist[dd]) 
+
+    for ddd in range(len(mylist)): 
+
+        if mylist[ddd][-1]=='medium': 
+
+            lst3.append(mylist[ddd]) 
+
+    for d4 in range(len(mylist)): 
+
+        if mylist[d4][-1]=='high': 
+
+            lst4.append(mylist[d4]) 
+
+     
+
+ 
+
+    for hh in range(len(list0)): 
+
+        if 'lsn' in list0[hh][-1]: 
+
+            list__0.append(list0[hh][:2]) 
+
+ 
+
+    for vv in range(len(list__0)): 
+
+        for yy in range(len(list2)): 
+
+             
+
+            #cas où l'annotation commence avant/meme temps et se termine pendant/au meme temps 
+
+                 
+
+            if (list2[yy][0]<=list__0[vv][0]) and (list__0[vv][0]<=list2[yy][1]<=list__0[vv][1]): 
+
+         
+
+                newlist_.append((list__0[vv][0],list2[yy][1],list2[yy][-1])) 
+
+                 
+
+            #cas où l'annotation commence avant et se termine apres 
+
+            if (list2[yy][0]<=list__0[vv][0]) and (list2[yy][1]>=list__0[vv][1]): 
+
+                c=list__0[vv][1]-list__0[vv][0] 
+
+                     
+
+                newlist_.append((list__0[vv][0],list__0[vv][1],list2[yy][-1])) 
+
+            #cas ou il est compris entre les 2 voir égale  
+
+            if (list__0[vv][0]<=list2[yy][0]<=list__0[vv][1]) and (list__0[vv][0]<=list2[yy][1]<=list__0[vv][1]): 
+
+                f=list2[yy][1]-list2[yy][0] 
+
+                     
+
+                newlist_.append((list2[yy][0],list2[yy][1],list2[yy][-1]))  
+
+            #cas où l'annotation commence pendant/égale et se termine après 
+
+            if (list__0[vv][0]<=list2[yy][0]<=list__0[vv][1]) and (list2[yy][1]>=list__0[vv][1]): 
+
+                r=list__0[vv][1]-list2[yy][0] 
+
+                newlist_.append((list2[yy][0],list__0[vv][1],list2[yy][-1])) 
+
+ 
+
+    for hhh in newlist_:  
+
+        if hhh not in mylist_:  
+
+            mylist_.append(hhh) 
+
+ 
+
+    for d2 in range(len(mylist_)): 
+
+        if mylist_[d2][-1]=='subtle': 
+
+            lst5.append(mylist_[d2]) 
+
+    for dd2 in range(len(mylist_)): 
+
+        if mylist_[dd2][-1]=='low': 
+
+            lst6.append(mylist_[dd2]) 
+
+    for ddd2 in range(len(mylist_)): 
+
+        if mylist_[ddd2][-1]=='medium': 
+
+            lst7.append(mylist_[ddd2]) 
+
+    for d42 in range(len(mylist_)): 
+
+        if mylist_[d42][-1]=='high': 
+
+            lst8.append(mylist_[d42]) 
+
+     
+
+     
+
+    count_mimicry(lst1,lst5,0) 
+
+    count_mimicry(lst1,lst6,0) 
+
+    count_mimicry(lst1,lst7,0) 
+
+    count_mimicry(lst1,lst8,0) 
+
+    count_mimicry(lst2,lst5,0) 
+
+    count_mimicry(lst2,lst6,0) 
+
+    count_mimicry(lst2,lst7,0) 
+
+    count_mimicry(lst2,lst8,0) 
+
+    count_mimicry(lst3,lst5,0) 
+
+    count_mimicry(lst3,lst6,0) 
+
+    count_mimicry(lst3,lst7,0) 
+
+    count_mimicry(lst3,lst8,0) 
+
+    count_mimicry(lst4,lst5,0) 
+
+    count_mimicry(lst4,lst6,0) 
+
+    count_mimicry(lst4,lst7,0) 
+
+    count_mimicry(lst4,lst8,0) 
+
+ 
+
+coco=np.array([[count_mimicry(lst1,lst5,0)[0],count_mimicry(lst1,lst6,0)[0],count_mimicry(lst1,lst7,0)[0],count_mimicry(lst1,lst8,0)[0]],[count_mimicry(lst2,lst5,0)[0],count_mimicry(lst2,lst6,0)[0],count_mimicry(lst2,lst7,0)[0],count_mimicry(lst2,lst8,0)[0]],[count_mimicry(lst3,lst5,0)[0],count_mimicry(lst3,lst6,0)[0],count_mimicry(lst3,lst7,0)[0],count_mimicry(lst3,lst8,0)[0]],[count_mimicry(lst4,lst5,0)[0],count_mimicry(lst4,lst6,0)[0],count_mimicry(lst4,lst7,0)[0],count_mimicry(lst4,lst8,0)[0]]]) 
+
+sns.heatmap(coco) 
+
+plt.show() 
