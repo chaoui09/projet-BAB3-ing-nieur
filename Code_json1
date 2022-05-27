@@ -1,3 +1,4 @@
+#code pour ouvrire les json (code de la partie 1 du chapitre 3)
 # projet-BAB3-ing-nieur
 import json#Provide JSON decoding/encoding
 import copy#This module provides generic shallow and deep copy operations
