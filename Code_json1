@@ -1,0 +1,75 @@
+# projet-BAB3-ing-nieur
+import json#Provide JSON decoding/encoding
+import copy#This module provides generic shallow and deep copy operations
+import os# provide OS functions( creating and removing a directory)
+import matplotlib#matplotlib is a python 2D plotting library which produces publication quality figures
+import matplotlib.pyplot as plt
+results = []#initialized empty list
+count_list =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]#initialized list of zero
+dict_pose_keypoints_2d ={}#initialized empty dictionnary
+dictionnaire_de_dictionnaires_pose_keypoints_2d = {}
+dict_face_keypoints_2d ={}
+j=0
+for subdir, dirs, files in os.walk(r'C:\Users\fcogl\OneDrive\Documents\json entier'):
+   for file in files:
+        filepath = subdir + os.sep + file
+    
+        with open(filepath) as f:
+            if filepath.endswith(".json"):
+                data = json.load(f)
+                for state in data['people']:
+                    valeur_key = 1
+                    for i in range(0,len(state['pose_keypoints_2d']),3):
+                      dict_pose_keypoints_2d[valeur_key] =(state['pose_keypoints_2d'][i], state['pose_keypoints_2d'][i+1],state['pose_keypoints_2d'][i+2])
+                      valeur_key +=1
+                      if state['pose_keypoints_2d'][i] == 0:
+                        count_list[valeur_key-2]+=1
+                     
+                    results.append(copy.deepcopy(dict_pose_keypoints_2d))#return a deep copy of dict_pose_keypoints_2d  
+'''
+function that opens each of the json files separately, 
+taking care that they are indeed json files. 
+then I get the data from these json and put it in a dictionary. 
+the value of the key corresponds to the associated joints in openpose
+
+'''
+indice_list=[]
+counter=0                     
+for count in count_list:
+  if count > 1:
+  
+    indice_list.append(counter)
+  counter +=1   
+for dictfinal in results:
+  for indice in indice_list:
+
+
+    del dictfinal[indice+1]
+'''
+recovery of the number of times a seal passes through zero
+and we delete if it appears too many times    
+'''         
+print("_________________________________________")
+print (results) 
+print("____________________________") 
+print (indice_list) 
+print("_________________________________________________________________")
+print(count_list)
+print("___________________________")
+for f in range(len (count_list)) :
+  print(f)
+  print(f<=5)
+
+  if count_list[f] <= 1:
+    
+    count_list[f]=-1
+while(-1 in count_list):
+  count_list.remove(-1)    
+
+print(count_list)    
+matplotlib.pyplot.bar(indice_list,count_list,0.8,0,align='center')
+plt.title('all json')
+plt.show()
+                      
+'''creation of  histogram which takes the number of zero by joints'''
+
