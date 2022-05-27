@@ -1,4 +1,4 @@
-#code toverify heatmap
+#elan files analysing
 import os 
 
 from os import listdir 
